@@ -1,0 +1,61 @@
+---
+layout: post
+title:  "In case you dont feel like writing Dockerfile..."
+date:   2020-12-15 12:54:49 -0500
+categories: kpack harbor
+---
+Use Cloud Native Buildpacks automation through [kpack](https://github.com/pivotal/kpack)
+
+## Install kpack
+
+```bash
+export KPACK_VERSION=0.1.4
+
+wget https://github.com/pivotal/kpack/releases/download/v"$KPACK_VERSION"/release-"$KPACK_VERSION".yaml
+
+kubectl apply  --filename release-"$KPACK_VERSION".yaml
+```
+
+## Secret to connect to image registry
+
+```bash
+kubectl create secret docker-registry registry-credentials \
+    --docker-username=ashumilov \
+    --docker-password='supersecretpassword' \
+    --docker-server=https://harbor-repo.vmware.com/v2/ \
+    --namespace default
+```
+
+## Create kpack stack, builder, and image
+
+```bash
+kubectl apply -f store.yaml
+kubectl apply -f stack.yaml
+kubectl apply -f builder.yaml
+kubectl apply -f image.yaml
+```
+
+Download and install [kpack cli](https://github.com/vmware-tanzu/kpack-cli)
+
+Verify that builder is healthy
+
+```bash
+kp builder list
+NAME                 READY    STACK                          IMAGE
+chachkies-builder    true     io.buildpacks.stacks.bionic    ashumilov/builder@sha256:36555c4fbf60c7ca567a8ed730872cec83f5b3f403d3ffc1712683ec32fc0e68
+```
+
+At this point, image build can be monitored
+
+```bash
+kp image list
+kp build logs builder-image
+```
+
+Trigger it again
+
+```bash
+kp image trigger builder-image
+```
+
+Here is the [Git Repo](https://github.com/poprygun/builders/tree/master/kpack) with working sources for the guide.
