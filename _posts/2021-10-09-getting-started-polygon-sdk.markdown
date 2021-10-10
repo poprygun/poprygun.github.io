@@ -1,7 +1,7 @@
 ---
 layout: post
-title:  "In case you want to start Polygon SDK cluster..."
-date:   2021-10-09 03:12:49 -0500
+title:  "In case you want to start Polygon SDK cluster with node running on Raspbery PI..."
+date:   2021-10-10 03:54:49 -0500
 categories: polygon-sdk
 ---
 
@@ -17,7 +17,7 @@ gh repo clone 0xPolygon/polygon-sdk
 
 # Bootstrap few polygon-sdk nodes quickly following [official guide](https://sdk-docs.polygon.technology/docs/how-tos/howto-setup-ibft/howto-set-ibft-locally)
 
-## Init nodes
+## Init nodes on local machine
 
 ```bash
 polygon-sdk ibft init --data-dir data-dir1
@@ -37,11 +37,15 @@ polygon-sdk ibft init --data-dir data-dir3
 [IBFT INIT]
 Public key (address) = 0xFb8F2edC5d47342337bd4c72daB81FcD01d1D8E6
 Node ID              = 16Uiu2HAm4ZxhPCjfFe1pcK1fU8732atXZkR2YjJRTe88jkCKJyMa
+```
 
+## Init node on Raspbery Pi
+
+```bash
 polygon-sdk ibft init --data-dir data-dir4
 
 [IBFT INIT]
-Public key (address) = 0xfd0ad3983B390F14B2d4360A5a0E62490b92dF4d
+Public key (address) = 0x02BaF5c90C3576F378Fc6404af2af54e8D2AcCDf
 Node ID              = 16Uiu2HAmDcfopFddSVe65AZ1ehhfmue1z25JGroRH3CYtobP89HN
 ```
 
@@ -62,7 +66,9 @@ Public key:     0438de21eb96843d9cabb3d78a9376c6c25e5d1e435e1b2202ee5ca016bb007d
 Private key:    XXXXXXXXXXXXX
 ```
 
-Copy data-dir1/keystore contents to data-dir2, data-dir3 and data-dir4.
+Copy data-dir1/keystore contents to data-dir2, data-dir3 and Raspbery PI - data-dir4.
+
+## Capture internal IPs of local machine (192.168.1.226), and remote node running on RPI (92.168.1.194)
 
 ## Generate genesis config
 
@@ -72,16 +78,21 @@ Preload one of the generated accounts with address from account1.txt, generated 
 polygon-sdk genesis --consensus ibft --ibft-validator=0x0ab674FE72f4aB52dC99F424ecc086a6f6Cbce87 \
 --ibft-validator=0x0c98BB76ceAa2cA67eD745BE2C58755fb90a719f \
 --ibft-validator=0xFb8F2edC5d47342337bd4c72daB81FcD01d1D8E6 \
---ibft-validator=0xfd0ad3983B390F14B2d4360A5a0E62490b92dF4d \
---bootnode=/ip4/127.0.0.1/tcp/10001/p2p/16Uiu2HAmL5sEjLciHNc9VgJRGD8Mhe4KWrhTz8Kg7n2sazeDQmD9 \
+--ibft-validator=0x02BaF5c90C3576F378Fc6404af2af54e8D2AcCDf \
+--bootnode=/ip4/192.168.1.226/tcp/10001/p2p/16Uiu2HAmL5sEjLciHNc9VgJRGD8Mhe4KWrhTz8Kg7n2sazeDQmD9 \
 --premine=0x3bFC8a131be8aE818978F6FA57250bB3c8BbD919:1000000000000000000000
 ```
 
-## Run nodes
+## Run nodes on local machine
 
 ```bash
-polygon-sdk server --data-dir ./data-dir1 --chain genesis.json --grpc :10000 --libp2p :10001 --jsonrpc :10002 --seal --log-level DEBUG
-polygon-sdk server --data-dir ./data-dir2 --chain genesis.json --grpc :20000 --libp2p :20001 --jsonrpc :20002 --seal --log-level DEBUG
-polygon-sdk server --data-dir ./data-dir3 --chain genesis.json --grpc :30000 --libp2p :30001 --jsonrpc :30002 --seal --log-level DEBUG
-polygon-sdk server --data-dir ./data-dir4 --chain genesis.json --grpc :40000 --libp2p :40001 --jsonrpc :40002 --seal --log-level DEBUG
+polygon-sdk server --data-dir ./data-dir1 --chain genesis.json --grpc :10000 --libp2p 0.0.0.0:10001 --nat 192.168.1.226 --jsonrpc :10002 --seal --log-level DEBUG
+polygon-sdk server --data-dir ./data-dir2 --chain genesis.json --grpc :20000 --libp2p 0.0.0.0:20001 --nat 192.168.1.226 --jsonrpc :20002 --seal --log-level DEBUG
+polygon-sdk server --data-dir ./data-dir3 --chain genesis.json --grpc :30000 --libp2p 0.0.0.0:30001 --nat 192.168.1.226 --jsonrpc :30002 --seal --log-level DEBUG
+```
+
+## Run node on Raspbery PI
+
+```bash
+polygon-sdk server --data-dir ./data-dir5 --chain genesis.json --grpc :40000 --libp2p 0.0.0.0:40001 --nat 192.168.1.194 --jsonrpc :40002 --seal --log-level DEBUG
 ```
