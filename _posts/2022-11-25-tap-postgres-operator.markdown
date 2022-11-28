@@ -94,6 +94,64 @@ kubectl logs -l app=postgres-operator
 kubectl api-resources --api-group=sql.tanzu.vmware.com
 ```
 
-## Create a database instance
-
 ## Consume instance from your service
+
+Define instance properties using postgres.yaml
+
+```yaml
+apiVersion: sql.tanzu.vmware.com/v1
+kind: Postgres
+metadata:
+  name: postgres-sample
+spec:
+  memory: 800Mi
+  cpu: 0.5
+  storageClassName: postgres-storage-class
+  monitorStorageClassName: postgres-storage-class
+  storageSize: 2G
+  pgConfig:
+    dbname: postgres-sample
+    username: admin
+    appUser: superpassword
+  highAvailability:
+    enabled: false
+```
+
+Create a database instance
+
+```bash
+kubectl apply -f postgres.yaml -n postgres-databases
+```
+
+Verify instance creation
+
+```bash
+kubectl get postgres postgres-sample -o yaml
+```
+
+Monitor logs
+
+```bash
+kubectl logs pod/postgres-sample-0 --all-containers  -n postgres-databases
+kubectl logs -l postgres-instance=postgres-sample --all-containers --max-log-requests 10 --tail=-1 --prefix
+```
+
+Verify instance access
+
+```bash
+kubectl exec -ti pod/postgres-sample -- pg_autoctl show state
+```
+
+Login to instance
+
+```bash
+kubectl exec -it postgres-sample-0 -- bash -c "psql"
+```
+
+### Accessing the instance credentials
+
+```bash
+dbname=$(kubectl get secret postgres-sample-db-secret -o go-template='{{.data.dbname | base64decode}}')
+username=$(kubectl get secret postgres-sample-db-secret -o go-template='{{.data.username | base64decode}}')
+password=$(kubectl get secret postgres-sample-db-secret -o go-template='{{.data.password | base64decode}}')
+```
