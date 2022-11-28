@@ -94,7 +94,7 @@ kubectl logs -l app=postgres-operator
 kubectl api-resources --api-group=sql.tanzu.vmware.com
 ```
 
-## Consume instance from your service
+## Create DB Instance
 
 Define instance properties using postgres.yaml
 
@@ -155,3 +155,66 @@ dbname=$(kubectl get secret postgres-sample-db-secret -o go-template='{{.data.db
 username=$(kubectl get secret postgres-sample-db-secret -o go-template='{{.data.username | base64decode}}')
 password=$(kubectl get secret postgres-sample-db-secret -o go-template='{{.data.password | base64decode}}')
 ```
+
+## Consume Instance from the application
+
+### Application must be deployed in exploded form for buildpack to take effect
+
+Add following section to `build.gradle`
+
+`build.gradle`
+
+```groovy
+jar {
+	enabled = false
+}
+```
+
+### Add `service-ref` paramater to tanzu create command identifying to service to bind to `db=sql.tanzu.vmware.com/v1:Postgres:postgres-databases:postgres-sample`
+
+```bash
+tanzu apps workload create my-app \
+--git-repo https://gitlab.eng.vmware.com/my-app.git \
+--type web --git-branch main --namespace default \
+--label "app.kubernetes.io/part-of=my-app" \
+--build-env "BP_JVM_VERSION=17" \
+--annotation "autoscaling.knative.dev/minScale=1" \
+--env "JAVA_TOOL_OPTIONS=-Dmanagement.server.port=8080" \
+--service-ref "db=sql.tanzu.vmware.com/v1:Postgres:postgres-databases:postgres-sample"
+```
+
+## Useful db access commands
+
+```bash
+kubectl exec -ti pod/postgres-sample-0 -- pg_autoctl show state
+```
+
+### Connect to Postgres container
+
+```bash
+kubectl exec -it postgres-sample-0 -- bash -c "psql"
+```
+
+### Extract credentials for access to the database from remote clients
+
+```bash
+host=$(kubectl get service postgres-sample -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+port=$(kubectl get service postgres-sample -o jsonpath='{.spec.ports[0].port}')
+```
+
+## Resources
+
+Use [Service Bindings](https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.3/tap/GUID-getting-started-consume-services.html#overview)
+
+[Spring Cloud Bindings](https://github.com/vmware-tanzu/servicebinding) pickup Servivce Binding for Postgres and injects datasource variables
+
+Make sure that [Services Toolkit is installed](https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.3/tap/GUID-services-toolkit-install-services-toolkit.html)
+
+Follow [steps to bind the application to Postgres instance](https://docs.vmware.com/en/VMware-Tanzu-SQL-with-Postgres-for-Kubernetes/1.7/tanzu-postgres-k8s/GUID-creating-service-bindings.html)
+
+Folowing conventions are applied
+
+[Spring Boot convention](https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.3/tap/GUID-spring-boot-conventions-reference-CONVENTIONS.html#spring-boot-convention-1) is applied.  System `-D` properties are added to `JAVA_TOOL_OPTIONS` variable.  Used to configure Actuator management port for exapmple, as well as probes used to verify the health of the workload.
+
+[Spring Boot Buildpack](https://github.com/paketo-buildpacks/spring-boot) conributes org.springframework.cloud:spring-cloud-bindings:1.10.0
+[Service intent conventions](https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.3/tap/GUID-spring-boot-conventions-reference-CONVENTIONS.html#service-intent-conventions-6) adds annotation and label to PodTemplateSpec for each dependency found - `postgresql` in our case marking the workload as a candidate for service binding
